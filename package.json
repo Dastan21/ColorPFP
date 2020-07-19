@@ -1,0 +1,11 @@
+{
+  "name": "ColorPFP",
+  "version": "1.0.0",
+  "description": "Change color of a role following the average color of an user's pfp",
+  "main": "bot.js",
+  "author": "Dastan21",
+  "dependencies": {
+    "discord.js": "^12.2.0",
+    "jimp": "^0.14.0"
+  }
+}
