@@ -3,6 +3,6 @@ Discord bot to change the color of a role depending on the user's profile pictur
 ## Prefix
 - pfp
 ## Commands
- - help: show help panel
- - update @Role: change color of role depending on your pfp
+ - **help**: show help panel
+ - **update *@Role***: change color of role depending on your pfp
  
