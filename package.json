@@ -5,7 +5,10 @@
   "main": "bot.js",
   "author": "Dastan21",
   "dependencies": {
+    "canvas": "^2.6.1",
     "discord.js": "^12.2.0",
-    "jimp": "^0.14.0"
+    "fs": "0.0.1-security",
+    "jimp": "^0.14.0",
+    "node-vibrant": "^3.1.5"
   }
 }
