@@ -1,3 +1,8 @@
+/*
+ * ColorPFP Discord bot
+ * @author Dastan21
+ */
+
 const Discord = require('discord.js');
 const { token, prefix } = require('./config');
 const bot = new Discord.Client();
@@ -9,7 +14,14 @@ const Vibrant = require('node-vibrant');
 
 bot.on('ready', () => {
   console.log(bot.user.tag + " is online");
-	bot.user.setStatus('online');
+	// bot.user.setStatus('online');
+	bot.user.setPresence({
+		activity: {
+			name: 'pfp closely...',
+			type: 'WATCHING'
+		},
+		status: 'online' }
+	)
 })
 
 
