@@ -9,7 +9,6 @@ const bot = new Discord.Client();
 const util = require('util')
 const Jimp = require('jimp');
 const Canvas = require('canvas');
-const fs = require('fs');
 const Vibrant = require('node-vibrant');
 
 bot.on('ready', () => {
@@ -17,7 +16,7 @@ bot.on('ready', () => {
 	// bot.user.setStatus('online');
 	bot.user.setPresence({
 		activity: {
-			name: 'pfp closely...',
+			name: 'closely users pfp...',
 			type: 'WATCHING'
 		},
 		status: 'online' }
@@ -39,9 +38,9 @@ async function cmdProcess(msg) {
 
 	switch (primaryCommand) {
 		case 'help':
-			if (arguments.length == 0)
 				showHelp(msg);
-			else
+			break;
+		case 'usage':
 				helpCmd(msg, arguments[0]);
 			break;
 		case 'color':
@@ -51,7 +50,27 @@ async function cmdProcess(msg) {
 				changeRole(msg, role, color);
 			break;
 		case 'modify':
-			imageProcess(msg, arguments);
+			if (arguments[0] === 'list') {
+				message = new Discord.MessageEmbed()
+					.setColor("WHITE")
+					.setAuthor(msg.author.username, msg.author.displayAvatarURL())
+					.setTitle("Modify options list panel")
+					.setDescription("Use `pfp usage [OPTION]` to see its usage.")
+					.setThumbnail(msg.author.avatarURL())
+					.setThumbnail(bot.user.displayAvatarURL())
+					.addFields(
+						{ name: "• circle COLOR", value: "Creates a shadow on the pfp."},
+						{ name: "• invert", value: "Creates a shadow on the pfp."},
+						{ name: "• fisheye [RADIUS]", value: "Apply a fisheye effect to the pfp."},
+						{ name: "• blur [VALUE]", value: "Quickly blur the pfp."},
+						{ name: "• shadow [OPACITY] [SIZE] [BLUR]", value: "Creates a shadow on the pfp."},
+						{ name: "• pixelate [SIZE]", value: "Pixelate the pfp."}
+					)
+					.setTimestamp()
+					.setFooter("ColorPFP");
+				msgSend(msg, "", message);
+			} else
+				imageProcess(msg, arguments);
 			break;
 		case 'prominent':
 			showProminents(msg);
@@ -101,10 +120,11 @@ function showHelp(msg) {
 		.setThumbnail(bot.user.displayAvatarURL())
 		.addFields(
 			{ name: "• help", value: "Shows this panel."},
-			{ name: "• help [COMMAND]", value: "Shows the command syntax."},
+			{ name: "• usage COMMAND/OPTION", value: "Shows the command usage."},
 			{ name: "• prominent", value: "Shows the 6 prominents colors of your pfp."},
-			{ name: "• color @ROLE", value: "Update the color of the role mentionned."},
-			{ name: "• modify [OPTION]", value: "Modify your pfp."}
+			{ name: "• color @ROLE COLOR", value: "Update the color of a role."},
+			{ name: "• modify OPTION", value: "Modify your pfp."},
+			{ name: "• modify list", value: "Shows the list of options."}
 		)
 		.setTimestamp()
 		.setFooter("ColorPFP");
@@ -118,22 +138,22 @@ function helpCmd(msg, cmd) {
 			message = "`pfp prominent`";
 			break;
 		case "circle":
-			message = "`pfp modify circle COLOR [CIRCLE_SIZE]`\n• COLOR: hex color\n• CIRCLE_SIZE: integer";
+			message = "`pfp modify circle COLOR [CIRCLE_SIZE]`\n*• COLOR: hex color\n• CIRCLE_SIZE: integer (optional)*";
 			break;
 		case "invert":
-			message = "`pfp invert`";
-			break;
-		case "normalize":
-			message = "`pfp normalize`";
+			message = "`pfp modify invert`";
 			break;
 		case "fisheye":
-			message = "`pfp fisheye [RADIUS]`\n• RADIUS: decimal";
+			message = "`pfp modify fisheye [RADIUS]`\n*• RADIUS: decimal*";
 			break;
-		case "gaussian":
-			message = "`pfp gaussian [VALUE]`";
+		case "blur":
+			message = "`pfp modify blur [VALUE]`\n*• VALUE: decimal (optional)*";
 			break;
 		case "shadow":
-			message = "`pfp shadow [OPACITY] [SIZE] [BLUR]`\n• OPACITY: decimal\n• SIZE: decimal\n• BLUE: integer";
+			message = "`pfp modify shadow [OPACITY] [SIZE] [BLUR]`\n*• OPACITY: decimal (optional)\n• SIZE: decimal (optional)\n• BLUR: integer (optional)*";
+			break;
+		case "pixelate":
+			message = "`pfp modify pixelate [SIZE]`\n*• SIZE: integer (optional)*";
 			break;
 		default:
 			msgReply(msg, "this command doesn't exist.");
@@ -153,11 +173,11 @@ async function changeRole(msg, role, color) {
 }
 
 async function showProminents(msg) {
-	const img_path = msg.author.displayAvatarURL({ format: 'png' });
+	const img_url = msg.author.displayAvatarURL({ format: 'png' });
 	const square_size = 64;
 	const canvas = Canvas.createCanvas(6*square_size, square_size);
 	const ctx = canvas.getContext('2d');
-	await Vibrant.from(img_path).getPalette()
+	await Vibrant.from(img_url).getPalette()
 		.then((palette) => {
 			let i = 0;
 			Object.keys(palette).forEach(function(key) {
@@ -174,7 +194,7 @@ async function showProminents(msg) {
 				++i;
 			})
 		})
-	const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'prominents.png');
+	const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'prominent.png');
 	msgSend(msg, "", attachment);
 	// msgReply(msg, str);
 }
@@ -185,11 +205,9 @@ function rgbToHex(r, g, b) {
 
 async function imageProcess(msg, args) {
 	// Paths
-	const dir_path = 'tmp/';
-	const img_path = msg.author.displayAvatarURL({ format: 'png' });
-	const tmp_path = dir_path + 'tmp_'+msg.author.id+'_'+msg.author.avatar+'.png';
+	const img_url = msg.author.displayAvatarURL({ format: 'png' });
 	// Jimp image
-	var image = await Jimp.read(img_path);
+	var image = await Jimp.read(img_url);
 	// Dimensions
 	const height = image.bitmap.height;
 	const width = image.bitmap.width;
@@ -200,7 +218,6 @@ async function imageProcess(msg, args) {
 			let lw = args[2] ? Number(args[2]) : 10;
 			if (col == undefined) { msgReply(msg, "you must choose a color."); return; }
 			if (!col.startsWith("#") || col.length != 7) { msgReply(msg, "wrong color syntax."); return; }
-			await image.write(tmp_path);
 			const img_canvas = await Canvas.loadImage(msg.author.displayAvatarURL({ format: 'png' }));
 			const w_canvas = img_canvas.width;
 			const h_canvas = img_canvas.height;
@@ -218,13 +235,10 @@ async function imageProcess(msg, args) {
 		case 'invert':
 			await image.invert();
 			break;
-		case 'normalize':
-			await image.normalize();
-			break;
-		case 'gaussian':
+		case 'blur':
 			let n = Number(args[1]);
 			if (!isNaN(n))
-				await image.gaussian(n);
+				await image.blur(n);
 			else {
 				msgReply(msg, "argument must be a number.");
 				return;
@@ -235,8 +249,7 @@ async function imageProcess(msg, args) {
 			let s = args[1] ? Number(args[2]) : 1;
 			let b = args[1] ? Number(args[3]) : 10;
 			if (!isNaN(o) && !isNaN(s) && !isNaN(b))
-				// await image.shadow({ opacity: o, size: s, blur: b, x: width/2, y: height/2 });
-				await image.shadow();
+				await image.shadow({ opacity: o, size: s, blur: b, x: 0, y: 0 });
 			else {
 				msgReply(msg, "arguments must be numbers.");
 				return;
@@ -251,23 +264,23 @@ async function imageProcess(msg, args) {
 				return;
 			}
 			break;
+		case 'pixelate':
+			let sz = args[1] ? Number(args[1]) : 8;
+			if (!isNaN(sz)) {
+				await image.pixelate(sz);
+			} else {
+				msgReply(msg, "argument must be a number.");
+				return;
+			}
+			break;
 		default:
 			msgReply(msg, "unknown command.");
 			return;
 	}
 	// Send
-	await image.write(tmp_path);
-	const attachment = new Discord.MessageAttachment(tmp_path);
-	msgSend(msg, "", attachment);
-	await setInterval(() => {
-		fs.exists(tmp_path, function(exists) {
-			if(exists) {
-				fs.unlink(tmp_path, (err) => {
-					if (err) { throw err; }
-				})
-			}
-		})
-	}, 100);
+	image.getBuffer(Jimp.MIME_PNG, (err, buffer) => {
+		msgSend(msg, "", new Discord.MessageAttachment(buffer));
+	});
 }
 
 
