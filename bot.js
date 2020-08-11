@@ -120,7 +120,7 @@ function showHelp(msg) {
 		.setThumbnail(bot.user.displayAvatarURL())
 		.addFields(
 			{ name: "• help", value: "Shows this panel."},
-			{ name: "• usage COMMAND/OPTION", value: "Shows the command usage."},
+			{ name: "• usage OPTION", value: "Shows the command usage."},
 			{ name: "• prominent", value: "Shows the 6 prominents colors of your pfp."},
 			{ name: "• color @ROLE COLOR", value: "Update the color of a role."},
 			{ name: "• modify OPTION", value: "Modify your pfp."},
@@ -134,9 +134,6 @@ function showHelp(msg) {
 function helpCmd(msg, cmd) {
 	let message = "";
 	switch (cmd) {
-		case "prominent":
-			message = "`pfp prominent`";
-			break;
 		case "circle":
 			message = "`pfp modify circle COLOR [CIRCLE_SIZE]`\n*• COLOR: hex color\n• CIRCLE_SIZE: integer (optional)*";
 			break;
