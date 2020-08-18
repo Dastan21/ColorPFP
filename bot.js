@@ -38,10 +38,10 @@ async function cmdProcess(msg) {
 
 	switch (primaryCommand) {
 		case 'help':
-				showHelp(msg);
+			showHelp(msg);
 			break;
 		case 'usage':
-				helpCmd(msg, arguments[0]);
+			helpCmd(msg, arguments[0]);
 			break;
 		case 'color':
 			var role = msg.mentions.roles.last();
@@ -59,12 +59,13 @@ async function cmdProcess(msg) {
 					.setThumbnail(msg.author.avatarURL())
 					.setThumbnail(bot.user.displayAvatarURL())
 					.addFields(
-						{ name: "• circle COLOR", value: "Creates a shadow on the pfp."},
-						{ name: "• invert", value: "Creates a shadow on the pfp."},
+						{ name: "• circle #COLOR", value: "Draw a circle around the pfp."},
+						{ name: "• invert", value: "Invert an images colors."},
 						{ name: "• fisheye [RADIUS]", value: "Apply a fisheye effect to the pfp."},
 						{ name: "• blur [VALUE]", value: "Quickly blur the pfp."},
-						{ name: "• shadow [OPACITY] [SIZE] [BLUR]", value: "Creates a shadow on the pfp."},
-						{ name: "• pixelate [SIZE]", value: "Pixelate the pfp."}
+						{ name: "• pixelate [SIZE]", value: "Pixelate the pfp."},
+						{ name: "• sepia", value: "Apply a sepia wash to the pfp."},
+						{ name: "• gray", value: "Remove colour from the pfp."}
 					)
 					.setTimestamp()
 					.setFooter("ColorPFP");
@@ -80,12 +81,16 @@ async function cmdProcess(msg) {
 	}
 }
 
+function typedArrayToBuffer(array) {
+    return array.buffer.slice(array.byteOffset, array.byteLength + array.byteOffset)
+}
+
 function validatorRole(msg, role, color) {
 	if (!msg.guild.me.hasPermission('MANAGE_ROLES'))
 		{ msgReply(msg, "I don't have permissions to change the role's color."); return false; }
 	if (role == undefined)
 		{ msgReply(msg, "this role doesn't exists."); return false; }
-	if (!color.startsWith("#") || color.length != 7)
+	if (color == undefined || !color.startsWith("#") || color.length != 7)
 		{ msgReply(msg, "wrong color syntax."); return false; }
 	return true;
 }
@@ -119,12 +124,12 @@ function showHelp(msg) {
 		.setThumbnail(msg.author.avatarURL())
 		.setThumbnail(bot.user.displayAvatarURL())
 		.addFields(
-			{ name: "• help", value: "Shows this panel."},
-			{ name: "• usage OPTION", value: "Shows the command usage."},
-			{ name: "• prominent", value: "Shows the 6 prominents colors of your pfp."},
-			{ name: "• color @ROLE COLOR", value: "Update the color of a role."},
+			{ name: "• help", value: "Show this panel."},
+			{ name: "• usage OPTION", value: "Show the command usage."},
+			{ name: "• prominent", value: "Show the 6 prominents colors of your pfp."},
+			{ name: "• color @ROLE #COLOR", value: "Update the color of a role."},
 			{ name: "• modify OPTION", value: "Modify your pfp."},
-			{ name: "• modify list", value: "Shows the list of options."}
+			{ name: "• modify list", value: "Show the options' list."}
 		)
 		.setTimestamp()
 		.setFooter("ColorPFP");
@@ -135,7 +140,7 @@ function helpCmd(msg, cmd) {
 	let message = "";
 	switch (cmd) {
 		case "circle":
-			message = "`pfp modify circle COLOR [CIRCLE_SIZE]`\n*• COLOR: hex color\n• CIRCLE_SIZE: integer (optional)*";
+			message = "`pfp modify circle #COLOR [CIRCLE_SIZE]`\n*• #COLOR: hex color\n• CIRCLE_SIZE: integer (optional)*";
 			break;
 		case "invert":
 			message = "`pfp modify invert`";
@@ -146,19 +151,20 @@ function helpCmd(msg, cmd) {
 		case "blur":
 			message = "`pfp modify blur [VALUE]`\n*• VALUE: decimal (optional)*";
 			break;
-		case "shadow":
-			message = "`pfp modify shadow [OPACITY] [SIZE] [BLUR]`\n*• OPACITY: decimal (optional)\n• SIZE: decimal (optional)\n• BLUR: integer (optional)*";
-			break;
 		case "pixelate":
 			message = "`pfp modify pixelate [SIZE]`\n*• SIZE: integer (optional)*";
+			break;
+		case "sepia":
+			message = "`pfp modify sepia`";
+			break;
+		case "gray":
+			message = "`pfp modify gray`";
 			break;
 		default:
 			msgReply(msg, "this command doesn't exist.");
 	}
 	msgSend(msg, message);
 }
-
-
 
 async function changeRole(msg, role, color) {
 	await role
@@ -201,7 +207,7 @@ function rgbToHex(r, g, b) {
 }
 
 async function imageProcess(msg, args) {
-	// Paths
+	// Img data
 	const img_url = msg.author.displayAvatarURL({ format: 'png' });
 	// Jimp image
 	var image = await Jimp.read(img_url);
@@ -241,17 +247,6 @@ async function imageProcess(msg, args) {
 				return;
 			}
 			break;
-		case 'shadow':
-			let o = args[1] ? Number(args[1]) : 0.7;
-			let s = args[1] ? Number(args[2]) : 1;
-			let b = args[1] ? Number(args[3]) : 10;
-			if (!isNaN(o) && !isNaN(s) && !isNaN(b))
-				await image.shadow({ opacity: o, size: s, blur: b, x: 0, y: 0 });
-			else {
-				msgReply(msg, "arguments must be numbers.");
-				return;
-			}
-			break;
 		case 'fisheye':
 			let r = args[1] ? Number(args[1]) : 2.0;
 			if (!isNaN(r))
@@ -269,6 +264,12 @@ async function imageProcess(msg, args) {
 				msgReply(msg, "argument must be a number.");
 				return;
 			}
+			break;
+		case 'sepia':
+			await image.sepia();
+			break;
+		case 'gray':
+			await image.grayscale();
 			break;
 		default:
 			msgReply(msg, "unknown command.");
