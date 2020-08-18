@@ -4,8 +4,9 @@ ColorPFP is a Discord bot that allow you to modify your profile picture and to c
 - pfp
 ## Commands
  - **help** --show help panel
- - **usage COMMAND/OPTION** --show the command usage
  - **prominent** --show the 6 prominents colors of the pfp
+ - **usage COMMAND/OPTION** --show the command usage
+ - **show [SIZE]** --show the pfp
  - **color @ROLE #COLOR** --update the color of a role
  - **modify OPTION** --modify the pfp
  - **modify list** --show the options' list

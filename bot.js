@@ -43,6 +43,19 @@ async function cmdProcess(msg) {
 		case 'usage':
 			helpCmd(msg, arguments[0]);
 			break;
+		case 'show':
+			const size_array = [ 16, 32, 64, 128, 256, 512, 1024 ];
+			let size = arguments[0] != undefined ? Number(arguments[0]) : 128;
+			if (isNaN(size) || !size_array.includes(size)) {
+				msgReply(msg, "number must be 16, 32, 64, 128, 256, 512 or 1024.");
+				return;
+			}
+			let img_url = msg.author.displayAvatarURL({ format: 'png', dynamic: true, size: size });
+			msgSend(msg, img_url);
+			break;
+		case 'prominent':
+			showProminents(msg);
+			break;
 		case 'color':
 			var role = msg.mentions.roles.last();
 			var color = arguments[0].startsWith("<@&") ? arguments[1] : arguments[0];
@@ -72,9 +85,6 @@ async function cmdProcess(msg) {
 				msgSend(msg, "", message);
 			} else
 				imageProcess(msg, arguments);
-			break;
-		case 'prominent':
-			showProminents(msg);
 			break;
 		default:
 			msgReply(msg, "this command doesn't exists.");
@@ -125,8 +135,9 @@ function showHelp(msg) {
 		.setThumbnail(bot.user.displayAvatarURL())
 		.addFields(
 			{ name: "• help", value: "Show this panel."},
-			{ name: "• usage OPTION", value: "Show the command usage."},
 			{ name: "• prominent", value: "Show the 6 prominents colors of your pfp."},
+			{ name: "• usage OPTION", value: "Show the command usage."},
+			{ name: "• show [SIZE]", value: "Show the pfp."},
 			{ name: "• color @ROLE #COLOR", value: "Update the color of a role."},
 			{ name: "• modify OPTION", value: "Modify your pfp."},
 			{ name: "• modify list", value: "Show the options' list."}
