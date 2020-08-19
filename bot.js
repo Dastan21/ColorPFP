@@ -45,7 +45,7 @@ async function cmdProcess(msg) {
 			break;
 		case 'show':
 			const size_array = [ 16, 32, 64, 128, 256, 512, 1024 ];
-			let size = arguments[0] != undefined ? Number(arguments[0]) : 128;
+			let size = arguments[0] ? Number(arguments[0]) : 128;
 			if (isNaN(size) || !size_array.includes(size)) {
 				msgReply(msg, "number must be 16, 32, 64, 128, 256, 512 or 1024.");
 				return;
@@ -250,7 +250,7 @@ async function imageProcess(msg, args) {
 			await image.invert();
 			break;
 		case 'blur':
-			let n = Number(args[1]);
+			let n = args[1] ? Number(args[1]) : 2;
 			if (!isNaN(n))
 				await image.blur(n);
 			else {
