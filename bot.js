@@ -8,12 +8,13 @@ const { token, prefix } = require('./config');
 const bot = new Discord.Client();
 const util = require('util')
 const Jimp = require('jimp');
-const Canvas = require('canvas');
+const { createCanvas, ImageData} = require('canvas');
 const Vibrant = require('node-vibrant');
+const { GifFrame, GifUtil, GifCodec, BitmapImage } = require('gifwrap');
+const phin = require('phin');
 
 bot.on('ready', () => {
   console.log(bot.user.tag + " is online");
-	// bot.user.setStatus('online');
 	bot.user.setPresence({
 		activity: {
 			name: 'closely users pfp...',
@@ -26,10 +27,10 @@ bot.on('ready', () => {
 
 bot.on('message', msg => {
 	if (msg.content.toLowerCase().startsWith(prefix))
-		cmdProcess(msg);
+		commandProcess(msg);
 });
 
-async function cmdProcess(msg) {
+async function commandProcess(msg) {
 	let rawCommand = msg.content;
     let fullCommand = rawCommand.substr(prefix.length+1);
     let splitCommand = fullCommand.split(' ');
@@ -41,7 +42,7 @@ async function cmdProcess(msg) {
 			showHelp(msg);
 			break;
 		case 'usage':
-			helpCmd(msg, arguments[0]);
+			showUsage(msg, arguments[0]);
 			break;
 		case 'show':
 			const size_array = [ 16, 32, 64, 128, 256, 512, 1024 ];
@@ -54,13 +55,13 @@ async function cmdProcess(msg) {
 			msgSend(msg, img_url);
 			break;
 		case 'prominent':
-			showProminents(msg);
+			showProminentsColors(msg);
 			break;
 		case 'color':
 			var role = msg.mentions.roles.last();
 			var color = arguments[0].startsWith("<@&") ? arguments[1] : arguments[0];
 			if (validatorRole(msg, role, color))
-				changeRole(msg, role, color);
+				changeColorRole(msg, role, color);
 			break;
 		case 'modify':
 			if (arguments[0] === 'list') {
@@ -68,7 +69,7 @@ async function cmdProcess(msg) {
 					.setColor("WHITE")
 					.setAuthor(msg.author.username, msg.author.displayAvatarURL())
 					.setTitle("Modify options list panel")
-					.setDescription("Use `pfp usage [OPTION]` to see its usage.")
+					.setDescription("Type `pfp usage [OPTION]` to see its usage.")
 					.setThumbnail(msg.author.avatarURL())
 					.setThumbnail(bot.user.displayAvatarURL())
 					.addFields(
@@ -83,16 +84,17 @@ async function cmdProcess(msg) {
 					.setTimestamp()
 					.setFooter("ColorPFP");
 				msgSend(msg, "", message);
-			} else
-				imageProcess(msg, arguments);
+			} else {
+				const pfp_url = msg.author.displayAvatarURL({ format: 'png', dynamic: true, size: 128});
+				if (pfp_url.slice(0,(pfp_url.length-9)).endsWith('.gif'))
+					gifModify(msg, arguments, pfp_url);
+				else
+					imgModify(msg, arguments, pfp_url);
+			}
 			break;
 		default:
 			msgReply(msg, "this command doesn't exists.");
 	}
-}
-
-function typedArrayToBuffer(array) {
-    return array.buffer.slice(array.byteOffset, array.byteLength + array.byteOffset)
 }
 
 function validatorRole(msg, role, color) {
@@ -114,7 +116,7 @@ async function msgReply(msg, message){
 }
 
 function msgSend(msg, message){
-	msgSend(msg, message, null)
+	msgSend(msg, message, null);
 }
 
 async function msgSend(msg, message, attachment){
@@ -147,7 +149,7 @@ function showHelp(msg) {
 	msgSend(msg, embed)
 }
 
-function helpCmd(msg, cmd) {
+function showUsage(msg, cmd) {
 	let message = "";
 	switch (cmd) {
 		case "circle":
@@ -177,7 +179,7 @@ function helpCmd(msg, cmd) {
 	msgSend(msg, message);
 }
 
-async function changeRole(msg, role, color) {
+async function changeColorRole(msg, role, color) {
 	await role
 		.setColor(color)
 		.then(() => msgReply(msg, "new color assigned."))
@@ -186,10 +188,10 @@ async function changeRole(msg, role, color) {
 		});
 }
 
-async function showProminents(msg) {
+async function showProminentsColors(msg) {
 	const img_url = msg.author.displayAvatarURL({ format: 'png' });
 	const square_size = 64;
-	const canvas = Canvas.createCanvas(6*square_size, square_size);
+	const canvas = createCanvas(6*square_size, square_size);
 	const ctx = canvas.getContext('2d');
 	await Vibrant.from(img_url).getPalette()
 		.then((palette) => {
@@ -197,7 +199,6 @@ async function showProminents(msg) {
 			Object.keys(palette).forEach(function(key) {
 				let hex = rgbToHex(palette[key]._rgb[0], palette[key]._rgb[1], palette[key]._rgb[2]);
 				// Square
-				// ctx.fillStyle = 'rgb('+palette[key]._rgb[0]+','+palette[key]._rgb[1]+','+palette[key]._rgb[2]+')';
 				ctx.fillStyle = hex;
 				ctx.fillRect(i*square_size, 0, (i+1)*square_size, square_size);
 				// Hex text
@@ -210,86 +211,118 @@ async function showProminents(msg) {
 		})
 	const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'prominent.png');
 	msgSend(msg, "", attachment);
-	// msgReply(msg, str);
 }
 
 function rgbToHex(r, g, b) {
 	return "#" + ((1 << 24) + (~~(r) << 16) + (~~(g) << 8) + ~~(b)).toString(16).slice(1);
 }
 
-async function imageProcess(msg, args) {
-	// Img data
-	const img_url = msg.author.displayAvatarURL({ format: 'png' });
-	// Jimp image
-	var image = await Jimp.read(img_url);
+async function imgModify(msg, arguments, img_url) {
+	modifyProcess(msg, arguments, await Jimp.read(img_url)).then(function(img) {
+		if (img != null) {
+			img.getBuffer(Jimp.MIME_PNG, (err, buffer) => {
+				msgSend(msg, "", new Discord.MessageAttachment(buffer));
+			});
+		}
+	});
+}
+
+async function gifModify(msg, args, gif_url) {
+	const gif_name = msg.author.id + ".gif";
+	const res = await phin({
+		'url': gif_url
+	});
+	var frames = [];
+	var img;
+	await GifUtil.read(res.body).then(inputGif => {
+		inputGif.frames.forEach((frame, frameIndex) => {
+			Jimp.read(frame.bitmap, async function(err, image) {
+				if (img != false) {
+					await modifyProcess(msg, args, image).then(res => img = res);
+					await GifUtil.quantizeDekker(new BitmapImage(img.bitmap), 256);
+					await frames.push(new GifFrame(img.bitmap, { xOffset: await frame.xOffset, yOffset: await frame.yOffset, disposalMethod: await frame.disposalMethod, delayCentisecs: await frame.delayCentisecs, interlaced: await frame.interlaced }));
+				}
+			})
+		});
+	});
+	if (img != false) {
+		setTimeout(function() {
+			let encoder = new GifCodec();
+			encoder.encodeGif(frames).then(gif => {
+				msgSend(msg, "", new Discord.MessageAttachment(gif.buffer, gif_name))
+					.catch(err => {
+						msgReply(msg, "sorry, the pfp took too long to upload.");
+					});
+			});
+		}, 100);
+	}
+}
+
+async function modifyProcess(msg, args, image) {
+	var img = image;
 	// Dimensions
-	const height = image.bitmap.height;
-	const width = image.bitmap.width;
+	const height = img.bitmap.height;
+	const width = img.bitmap.width;
 	// Process
 	switch (args[0]) {
 		case 'circle':
 			let col = args[1];
-			let lw = args[2] ? Number(args[2]) : 10;
-			if (col == undefined) { msgReply(msg, "you must choose a color."); return; }
-			if (!col.startsWith("#") || col.length != 7) { msgReply(msg, "wrong color syntax."); return; }
-			const img_canvas = await Canvas.loadImage(msg.author.displayAvatarURL({ format: 'png' }));
-			const w_canvas = img_canvas.width;
-			const h_canvas = img_canvas.height;
-			const canvas = Canvas.createCanvas(w_canvas, h_canvas);
+			let lw = args[2] ? Number(args[2]) : 20;
+			if (col == undefined) { msgReply(msg, "you must choose a color."); return false; }
+			if (!col.startsWith("#") || col.length != 7) { msgReply(msg, "wrong color syntax."); return false; }
+			const canvas = createCanvas(width, height);
 			const ctx = canvas.getContext('2d');
-			ctx.drawImage(img_canvas, 0, 0, w_canvas, h_canvas);
+			var img_data = new ImageData(new Uint8ClampedArray(img.bitmap.data), width, height);
+			ctx.putImageData(img_data, 0, 0);
 			ctx.beginPath();
-			ctx.arc(w_canvas/2, h_canvas/2, h_canvas/2, 0, 2*Math.PI);
+			ctx.arc(width/2, height/2, height/2, 0, 2*Math.PI);
 			ctx.strokeStyle = col;
 			ctx.lineWidth = lw;
 			ctx.stroke();
-			image = await Jimp.read(canvas.toBuffer("image/png"));
-			await image.circle();
+			img = await Jimp.read(canvas.toBuffer(Jimp.MIME_PNG));
+			await img.circle();
 			break;
 		case 'invert':
-			await image.invert();
+			await img.invert();
 			break;
 		case 'blur':
 			let n = args[1] ? Number(args[1]) : 2;
 			if (!isNaN(n))
-				await image.blur(n);
+				await img.blur(n);
 			else {
 				msgReply(msg, "argument must be a number.");
-				return;
+				return false;
 			}
 			break;
 		case 'fisheye':
 			let r = args[1] ? Number(args[1]) : 2.0;
 			if (!isNaN(r))
-				await image.fisheye({ r: r });
+				await img.fisheye({ r: r });
 			else {
 				msgReply(msg, "argument must be a number.");
-				return;
+				return false;
 			}
 			break;
 		case 'pixelate':
 			let sz = args[1] ? Number(args[1]) : 8;
 			if (!isNaN(sz)) {
-				await image.pixelate(sz);
+				await img.pixelate(sz);
 			} else {
 				msgReply(msg, "argument must be a number.");
-				return;
+				return false;
 			}
 			break;
 		case 'sepia':
-			await image.sepia();
+			await img.sepia();
 			break;
 		case 'gray':
-			await image.grayscale();
+			await img.grayscale();
 			break;
 		default:
 			msgReply(msg, "unknown command.");
-			return;
+			return false;
 	}
-	// Send
-	image.getBuffer(Jimp.MIME_PNG, (err, buffer) => {
-		msgSend(msg, "", new Discord.MessageAttachment(buffer));
-	});
+	return img;
 }
 
 

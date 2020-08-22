@@ -7,7 +7,9 @@
   "dependencies": {
     "canvas": "^2.6.1",
     "discord.js": "^12.2.0",
+    "gifwrap": "^0.9.2",
     "jimp": "^0.14.0",
-    "node-vibrant": "^3.1.5"
+    "node-vibrant": "^3.1.5",
+    "phin": "^3.5.0"
   }
 }
