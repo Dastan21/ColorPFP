@@ -73,7 +73,7 @@ async function commandProcess(msg) {
 					.setThumbnail(msg.author.avatarURL())
 					.setThumbnail(bot.user.displayAvatarURL())
 					.addFields(
-						{ name: "• circle #COLOR", value: "Draw a circle around the pfp."},
+						{ name: "• circle #COLOR [CIRCLE_SIZE]", value: "Draw a circle around the pfp."},
 						{ name: "• invert", value: "Invert an images colors."},
 						{ name: "• fisheye [RADIUS]", value: "Apply a fisheye effect to the pfp."},
 						{ name: "• blur [VALUE]", value: "Quickly blur the pfp."},
