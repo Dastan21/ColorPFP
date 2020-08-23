@@ -267,7 +267,7 @@ async function modifyProcess(msg, args, image) {
 	switch (args[0]) {
 		case 'circle':
 			let col = args[1];
-			let lw = args[2] ? Number(args[2]) : 20;
+			let lw = args[2] ? Number(args[2]) : 15;
 			if (col == undefined) { msgReply(msg, "you must choose a color."); return false; }
 			if (!col.startsWith("#") || col.length != 7) { msgReply(msg, "wrong color syntax."); return false; }
 			const canvas = createCanvas(width, height);
