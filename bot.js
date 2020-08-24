@@ -239,7 +239,7 @@ async function gifModify(msg, args, gif_url) {
 			Jimp.read(frame.bitmap, async function(err, image) {
 				if (img != false) {
 					await modifyProcess(msg, args, image).then(res => img = res);
-					await GifUtil.quantizeDekker(new BitmapImage(img.bitmap), 256);
+					await GifUtil.quantizeWu(new BitmapImage(img.bitmap), 256);
 					await frames.push(new GifFrame(img.bitmap, { xOffset: await frame.xOffset, yOffset: await frame.yOffset, disposalMethod: await frame.disposalMethod, delayCentisecs: await frame.delayCentisecs, interlaced: await frame.interlaced }));
 				}
 			})
