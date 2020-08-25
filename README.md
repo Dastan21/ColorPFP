@@ -12,6 +12,7 @@ ColorPFP is a Discord bot that allow you to modify your profile picture and to c
  - **modify list** --show the options' list
 ## Options
  - *circle #COLOR [CIRCLE_SIZE]* --draw a circle around the pfp
+ - *round* --round the pfp with transparency
  - *invert* --invert the pfp colors
  - *fisheye [RADIUS]* --apply a fisheye effect to the pfp
  - *blur [VALUE]* --quickly blur the pfp

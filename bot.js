@@ -74,6 +74,7 @@ async function commandProcess(msg) {
 					.setThumbnail(bot.user.displayAvatarURL())
 					.addFields(
 						{ name: "• circle #COLOR [CIRCLE_SIZE]", value: "Draw a circle around the pfp."},
+						{ name: "• round", value: "Round the pfp with transparency."},
 						{ name: "• invert", value: "Invert an images colors."},
 						{ name: "• fisheye [RADIUS]", value: "Apply a fisheye effect to the pfp."},
 						{ name: "• blur [VALUE]", value: "Quickly blur the pfp."},
@@ -85,10 +86,13 @@ async function commandProcess(msg) {
 					.setFooter("ColorPFP");
 				msgSend(msg, "", message);
 			} else {
-				const pfp_url = msg.author.displayAvatarURL({ format: 'png', dynamic: true, size: 128});
-				if (pfp_url.slice(0,(pfp_url.length-9)).endsWith('.gif'))
-					gifModify(msg, arguments, pfp_url);
-				else
+				const pfp_url = msg.author.displayAvatarURL({ format: 'png', dynamic: true, size: 256});
+				if (pfp_url.slice(0,(pfp_url.length-9)).endsWith('.gif')) {
+					const res = await phin({
+						'url': pfp_url
+					});
+					gifModify(msg, arguments, res.body);
+				} else
 					imgModify(msg, arguments, pfp_url);
 			}
 			break;
@@ -227,14 +231,11 @@ async function imgModify(msg, arguments, img_url) {
 	});
 }
 
-async function gifModify(msg, args, gif_url) {
+async function gifModify(msg, args, gif_buf) {
 	const gif_name = msg.author.id + ".gif";
-	const res = await phin({
-		'url': gif_url
-	});
 	var frames = [];
 	var img;
-	await GifUtil.read(res.body).then(inputGif => {
+	await GifUtil.read(gif_buf).then(inputGif => {
 		inputGif.frames.forEach((frame, frameIndex) => {
 			Jimp.read(frame.bitmap, async function(err, image) {
 				if (img != false) {
@@ -247,13 +248,18 @@ async function gifModify(msg, args, gif_url) {
 	});
 	if (img != false) {
 		setTimeout(function() {
-			let encoder = new GifCodec();
-			encoder.encodeGif(frames).then(gif => {
-				msgSend(msg, "", new Discord.MessageAttachment(gif.buffer, gif_name))
-					.catch(err => {
-						msgReply(msg, "sorry, the pfp took too long to upload.");
-					});
-			});
+			if (frames.length == 0)
+				gifModify(msg, args, gif_buf);
+			else {
+				let encoder = new GifCodec();
+				encoder.encodeGif(frames).then(gif => {
+					if (args[0] === 'circle') {
+						args[0] = 'round';
+						gifModify(msg, args, gif.buffer);
+					} else
+						msgSend(msg, "", new Discord.MessageAttachment(gif.buffer, gif_name));
+				});
+			}
 		}, 100);
 	}
 }
@@ -267,7 +273,7 @@ async function modifyProcess(msg, args, image) {
 	switch (args[0]) {
 		case 'circle':
 			let col = args[1];
-			let lw = args[2] ? Number(args[2]) : 15;
+			let lw = args[2] ? Number(args[2]) : 25;
 			if (col == undefined) { msgReply(msg, "you must choose a color."); return false; }
 			if (!col.startsWith("#") || col.length != 7) { msgReply(msg, "wrong color syntax."); return false; }
 			const canvas = createCanvas(width, height);
@@ -280,6 +286,8 @@ async function modifyProcess(msg, args, image) {
 			ctx.lineWidth = lw;
 			ctx.stroke();
 			img = await Jimp.read(canvas.toBuffer(Jimp.MIME_PNG));
+			break;
+		case 'round':
 			await img.circle();
 			break;
 		case 'invert':
