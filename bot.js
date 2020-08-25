@@ -221,14 +221,22 @@ function rgbToHex(r, g, b) {
 	return "#" + ((1 << 24) + (~~(r) << 16) + (~~(g) << 8) + ~~(b)).toString(16).slice(1);
 }
 
-async function imgModify(msg, arguments, img_url) {
-	modifyProcess(msg, arguments, await Jimp.read(img_url)).then(function(img) {
+async function imgModify(msg, args, img_url) {
+	var img;
+	modifyProcess(msg, args, await Jimp.read(img_url)).then(res => img = res);
+	if (args[0] === 'circle') {
+		args[0] = 'round';
+		setTimeout(function() {
+			modifyProcess(msg, args, img).then(res => img = res);
+		}, 1);
+	}
+	setTimeout(function() {
 		if (img != null) {
 			img.getBuffer(Jimp.MIME_PNG, (err, buffer) => {
 				msgSend(msg, "", new Discord.MessageAttachment(buffer));
 			});
 		}
-	});
+	}, 2);
 }
 
 async function gifModify(msg, args, gif_buf) {
