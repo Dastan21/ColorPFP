@@ -1,22 +1,20 @@
 # ColorPFP <img src="icon.png" alt="ColorPFP logo" width="32">
-ColorPFP is a Discord bot that allow you to modify your profile picture and to change the color of roles.
+ColorPFP is a Discord bot that allows you to apply effects on your profile picture or any other image plus some extras commands
 ## Prefix
 - pfp
-## Commands
- - **help** --show help panel
+## Basic commands
+ - **help** --show infos about commands
  - **prominent** --show the 6 prominents colors of the pfp
- - **usage COMMAND/OPTION** --show the command usage
  - **show [SIZE]** --show the pfp
- - **color @ROLE #COLOR** --update the color of a role
- - **modify OPTION** --modify the pfp
- - **modify list** --show the options' list
-## Options
+ - **color @ROLE #COLOR** --change color of a role
+ - **effect EFFECT** --apply an effect to the pfp
+## Effect commands
  - *circle #COLOR [CIRCLE_SIZE]* --draw a circle around the pfp
  - *round* --round the pfp with transparency
  - *invert* --invert the pfp colors
  - *fisheye [RADIUS]* --apply a fisheye effect to the pfp
  - *blur [VALUE]* --quickly blur the pfp
- - *pixelate [SIZE]* --pixelize the pfp
+ - *pixel [SIZE]* --pixelize the pfp
  - *sepia* --apply a sepia wash to the pfp
  - *gray* --remove colour from the pfp
 ## Invite
