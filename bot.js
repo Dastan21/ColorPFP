@@ -64,14 +64,11 @@ async function commandProcess(msg) {
 				changeRoleColor(msg, role, color);
 			break;
 		case 'effect':
-			msg.channel.startTyping();
-			const pfp_url = arguments[arguments.length-1].startsWith("https://") || arguments[arguments.length-1].startsWith("http://") ? arguments[arguments.length-1] : msg.author.displayAvatarURL({ format: 'png', dynamic: true, size: config.const.EFFECT_SIZE});
+			const pfp_url = isImgURL(arguments[arguments.length-1]) ? arguments[arguments.length-1] : msg.author.displayAvatarURL({ format: 'png', dynamic: true, size: config.const.EFFECT_SIZE});
 			const res = await phin({ 'url': pfp_url });
 			var img_type = "gif";
 			try { await Jimp.read(pfp_url); } catch (e) { img_type = null; }
-			if (img_type != null) {
-				try { await GifUtil.read(res.body); } catch (e) { img_type = "png"; }
-			} else msg.channel.stopTyping();
+			if (img_type != null) try { await GifUtil.read(res.body); } catch (e) { img_type = "png"; }
 			if (img_type === "gif")
 				gifModify(msg, arguments, res.body);
 			else if (img_type === "png")
@@ -82,6 +79,10 @@ async function commandProcess(msg) {
 		default:
 			msgReply(msg, "this command doesn't exists.");
 	}
+}
+
+function isImgURL(url) {
+	return url.startsWith("https://") || url.startsWith("http://");
 }
 
 function validatorRole(msg, role, color) {
@@ -116,7 +117,7 @@ async function msgSend(msg, message, attachment){
 
 function showHelp(msg) {
 	let embed = new Discord.MessageEmbed()
-		.setColor("#ffffff")
+		.setColor("#fffffe")
 		.setTitle("Help panel")
 		.setDescription("ColorPFP allows you to apply effects on your profile picture or any other image plus some extras commands")
 		.setThumbnail(bot.user.displayAvatarURL())
@@ -238,29 +239,35 @@ async function imgModify(msg, args, img_url) {
 		img = await effectProcess(msg, args, img);
 	}
 	msgSend(msg, "", new Discord.MessageAttachment(await img.getBufferAsync(Jimp.MIME_PNG)), img_name);
-	await msg.channel.stopTyping();
 }
 
 async function gifModify(msg, args, gif_buf) {
 	const gif_name = msg.author.id + ".gif";
 	var frames = [];
+	var frame;
 	var img;
+	let strEffect = ""; for (var a = 0; a < args.length; a++) { if (!isImgURL(args[a])) { if (a > 0) strEffect = strEffect + " "; strEffect = strEffect + args[a]; } }
+	var msgBar = await msg.channel.send("", new Discord.MessageEmbed().setColor("#fffffe").addFields({ name: "[ Effect in progress ]", value: "`"+strEffect+"`" }, { name: "[ Progress bar ]", value: "`🔘▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬   0%`" }));
 	var gif = await GifUtil.read(gif_buf);
-	for (var frame of gif.frames) {
+	for (var i = 0; i < gif.frames.length; i++) {
+		frame = gif.frames[i];
+		let strProgress = "`"; let valProgress = Math.floor((i+1)/gif.frames.length*48); for (var j = 0; j < 49; j++) { if (j != valProgress) strProgress = strProgress + "▬"; else strProgress = strProgress + "🔘"; } strProgress = strProgress + "   "+ Math.floor(valProgress/48*100)+"%`";
+		await msgBar.edit("", new Discord.MessageEmbed().setColor("#fffffe").addFields({ name: "[ Effect in progress ]", value: "`"+strEffect+"`" }, { name: "[ Progress bar ]", value: strProgress }));
 		img = await Jimp.read(frame.bitmap);
 		img = await effectProcess(msg, args, img);
 		await GifUtil.quantizeWu(new BitmapImage(img.bitmap), 256);
 		await frames.push(new GifFrame(img.bitmap, { xOffset: frame.xOffset, yOffset: frame.yOffset, disposalMethod: frame.disposalMethod, delayCentisecs: frame.delayCentisecs, interlaced: frame.interlaced }));
 	};
 
+
 	const encoder = new GifCodec();
 	gif = await encoder.encodeGif(frames);
+	await msgBar.delete();
 	if (args[0] === 'circle') {
 		args[0] = 'round';
 		gifModify(msg, args, gif.buffer);
 	} else {
-		msgSend(msg, "", new Discord.MessageAttachment(gif.buffer, gif_name));
-		await msg.channel.stopTyping();
+		await msg.channel.send("", new Discord.MessageAttachment(gif.buffer, gif_name));
 	}
 }
 
@@ -273,7 +280,7 @@ async function effectProcess(msg, args, image) {
 	switch (args[0]) {
 		case 'circle':
 			let col = args[1];
-			let lw = args[2] ? Number(args[2]) : config.const.CIRCLE_SIZE;
+			let lw = args[2] && !isImgURL(args[2]) ? Number(args[2]) : config.const.CIRCLE_SIZE;
 			if (col == undefined) { msgReply(msg, "you must choose a color."); return false; }
 			if (!col.startsWith("#") || col.length != 7) { msgReply(msg, "wrong color syntax."); return false; }
 			const canvas = createCanvas(width, height);
@@ -294,7 +301,7 @@ async function effectProcess(msg, args, image) {
 			await img.invert();
 			break;
 		case 'blur':
-			let n = args[1] ? Number(args[1]) : config.const.BLUR_VALUE;
+			let n = args[1] && !isImgURL(args[1]) ? Number(args[1]) : config.const.BLUR_VALUE;
 			if (!isNaN(n))
 				await img.blur(n);
 			else {
@@ -303,7 +310,7 @@ async function effectProcess(msg, args, image) {
 			}
 			break;
 		case 'fisheye':
-			let r = args[1] ? Number(args[1]) : config.const.FISHEYE_RADIUS;
+			let r = args[1] && !isImgURL(args[1]) ? Number(args[1]) : config.const.FISHEYE_RADIUS;
 			if (!isNaN(r))
 				await img.fisheye({ r: r });
 			else {
@@ -312,7 +319,7 @@ async function effectProcess(msg, args, image) {
 			}
 			break;
 		case 'pixel':
-			let sz = args[1] ? Number(args[1]) : config.const.PIXEL_SIZE;
+			let sz = args[1] && !isImgURL(args[1]) ? Number(args[1]) : config.const.PIXEL_SIZE;
 			if (!isNaN(sz)) {
 				await img.pixelate(sz);
 			} else {
