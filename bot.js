@@ -37,6 +37,9 @@ async function commandProcess(msg) {
     let primaryCommand = splitCommand[0];
     let arguments = splitCommand.slice(1);
 
+	const urldata = await getURLData(msg, arguments[arguments.length-1]);
+	if (urldata.type == null) return;
+
 	switch (primaryCommand) {
 		case 'help':
 			if (arguments.length < 1)
@@ -55,44 +58,56 @@ async function commandProcess(msg) {
 			msgSend(msg, img_url);
 			break;
 		case 'prominent':
-			showProminentsColors(msg);
+			// let buf = urldata.data;
+			// console.log(urldata.data);
+			// if (urldata.type === "gif") {
+			// 	var gif = await GifUtil.read(buf);
+			// 	var img = gif.frames[0];
+			// 	console.log(img);
+			// 	// buf = img.bitmap.data;
+			// }
+			showProminentsColors(msg, urldata.data);
 			break;
 		case 'color':
 			var role = msg.mentions.roles.last();
 			var color = arguments[0].startsWith("<@&") ? arguments[1] : arguments[0];
-			if (validatorRole(msg, role, color))
-				changeRoleColor(msg, role, color);
+			if (roleValidator(msg, role, color)) changeRoleColor(msg, role, color);
 			break;
 		case 'effect':
-			const pfp_url = isImgURL(arguments[arguments.length-1]) ? arguments[arguments.length-1] : msg.author.displayAvatarURL({ format: 'png', dynamic: true, size: config.const.EFFECT_SIZE});
-			const res = await phin({ 'url': pfp_url });
-			var img_type = "gif";
-			try { await Jimp.read(pfp_url); } catch (e) { img_type = null; }
-			if (img_type != null) try { await GifUtil.read(res.body); } catch (e) { img_type = "png"; }
-			if (img_type === "gif")
-				gifModify(msg, arguments, res.body);
-			else if (img_type === "png")
-				imgModify(msg, arguments, pfp_url);
-			else
-				msgReply(msg, "the image link must end with an extension.");
+			if (urldata.type === "gif") gifModify(msg, arguments, urldata.data);
+			else 						imgModify(msg, arguments, urldata.data);
 			break;
 		default:
 			msgReply(msg, "this command doesn't exists.");
 	}
 }
 
-function isImgURL(url) {
-	return url.startsWith("https://") || url.startsWith("http://");
+function isImgURL(url) { return url.startsWith("https://") || url.startsWith("http://"); }
+
+async function getURLData(msg, url) {
+	var data = { data: null, type: "gif" };
+	const img_url = url && isImgURL(url) ? url : msg.author.displayAvatarURL({ format: 'png', dynamic: true, size: config.const.EFFECT_SIZE});
+	const res = await phin({ 'url': img_url });
+	try { await Jimp.read(img_url); } catch (e) { data.type = null; }
+	if (data.type != null) try { await GifUtil.read(res.body); } catch (e) { data.type = "png"; }
+	if (data.type != null) 	data.data = res.body;
+	else 					msgReply(msg, "the image link must end with an extension.");
+	return data;
 }
 
-function validatorRole(msg, role, color) {
-	if (!msg.guild.me.hasPermission('MANAGE_ROLES'))
-		{ msgReply(msg, "I don't have permissions to change the role's color."); return false; }
-	if (role == undefined)
-		{ msgReply(msg, "this role doesn't exists."); return false; }
-	if (color == undefined || !color.startsWith("#") || color.length != 7)
-		{ msgReply(msg, "wrong color syntax."); return false; }
+function roleValidator(msg, role, color) {
+	if (!msg.guild.me.hasPermission('MANAGE_ROLES')) { msgReply(msg, "I don't have permissions to change roles' color."); return false; }
+	if (role == undefined) { msgReply(msg, "this role doesn't exists."); return false; }
+	if (colorValidator(msg, color) == null) return false;
 	return true;
+}
+
+function colorValidator(msg, color) {
+	if (color == undefined || (color.startsWith("#") && color.length != 7) || (!color.startsWith("#") && color.length != 6)) {
+		msgReply(msg, "wrong color syntax.");
+		return null;
+	}
+	return color.startsWith("#") ? color : ("#"+color);
 }
 
 async function msgReply(msg, message){
@@ -134,7 +149,7 @@ function showHelp(msg) {
 			{
 				name: "‎",
 				value:
-				"P.S: You can use any image for the effects commands by adding a link to this image at the end of these commands"
+				"P.S: You can use any image by adding a link to this image at the end of every commands (expected `help` `show` `color`)"
 			}
 		)
 		.setTimestamp()
@@ -204,12 +219,11 @@ async function changeRoleColor(msg, role, color) {
 		});
 }
 
-async function showProminentsColors(msg) {
-	const img_url = msg.author.displayAvatarURL({ format: 'png' });
+async function showProminentsColors(msg, buf) {
 	const square_size = 64;
 	const canvas = createCanvas(6*square_size, square_size);
 	const ctx = canvas.getContext('2d');
-	await Vibrant.from(img_url).getPalette()
+	await Vibrant.from(buf).getPalette()
 		.then((palette) => {
 			let i = 0;
 			Object.keys(palette).forEach(function(key) {
@@ -231,9 +245,9 @@ async function showProminentsColors(msg) {
 
 function rgbToHex(r, g, b) { return "#" + ((1 << 24) + (~~(r) << 16) + (~~(g) << 8) + ~~(b)).toString(16).slice(1); }
 
-async function imgModify(msg, args, img_url) {
+async function imgModify(msg, args, img_buf) {
 	const img_name = msg.author.id + ".png";
-	var img = await effectProcess(msg, args, await Jimp.read(img_url));
+	var img = await effectProcess(msg, args, await Jimp.read(img_buf));
 	if (args[0] === 'circle') {
 		args[0] = 'round';
 		img = await effectProcess(msg, args, img);
@@ -247,16 +261,18 @@ async function gifModify(msg, args, gif_buf) {
 	var frame;
 	var img;
 	let strEffect = ""; for (var a = 0; a < args.length; a++) { if (!isImgURL(args[a])) { if (a > 0) strEffect = strEffect + " "; strEffect = strEffect + args[a]; } }
-	var msgBar = await msg.channel.send("", new Discord.MessageEmbed().setColor("#fffffe").addFields({ name: "[ Effect in progress ]", value: "`"+strEffect+"`" }, { name: "[ Progress bar ]", value: "`🔘▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬   0%`" }));
 	var gif = await GifUtil.read(gif_buf);
+	if (await effectProcess(msg, args, await Jimp.read(gif.frames[0].bitmap)) == null) return;
+	else var msgBar = await msg.channel.send("", new Discord.MessageEmbed().setColor("#fffffe").addFields({ name: "[ Effect in progress ]", value: "`"+strEffect+"`" }, { name: "[ Progress bar ]", value: "`🔘▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬   0%`" }));
 	for (var i = 0; i < gif.frames.length; i++) {
 		frame = gif.frames[i];
-		let strProgress = "`"; let valProgress = Math.floor((i+1)/gif.frames.length*48); for (var j = 0; j < 49; j++) { if (j != valProgress) strProgress = strProgress + "▬"; else strProgress = strProgress + "🔘"; } strProgress = strProgress + "   "+ Math.floor(valProgress/48*100)+"%`";
-		await msgBar.edit("", new Discord.MessageEmbed().setColor("#fffffe").addFields({ name: "[ Effect in progress ]", value: "`"+strEffect+"`" }, { name: "[ Progress bar ]", value: strProgress }));
 		img = await Jimp.read(frame.bitmap);
 		img = await effectProcess(msg, args, img);
 		await GifUtil.quantizeWu(new BitmapImage(img.bitmap), 256);
 		await frames.push(new GifFrame(img.bitmap, { xOffset: frame.xOffset, yOffset: frame.yOffset, disposalMethod: frame.disposalMethod, delayCentisecs: frame.delayCentisecs, interlaced: frame.interlaced }));
+		/* Progress bar */
+		let strProgress = "`"; let valProgress = Math.floor((i+1)/gif.frames.length*48); for (var j = 0; j < 49; j++) { if (j != valProgress) strProgress = strProgress + "▬"; else strProgress = strProgress + "🔘"; } strProgress = strProgress + "   "+ Math.floor(valProgress/48*100)+"%`";
+		await msgBar.edit("", new Discord.MessageEmbed().setColor("#fffffe").addFields({ name: "[ Effect in progress ]", value: "`"+strEffect+"`" }, { name: "[ Progress bar ]", value: strProgress }));
 	};
 
 
@@ -281,8 +297,10 @@ async function effectProcess(msg, args, image) {
 		case 'circle':
 			let col = args[1];
 			let lw = args[2] && !isImgURL(args[2]) ? Number(args[2]) : config.const.CIRCLE_SIZE;
-			if (col == undefined) { msgReply(msg, "you must choose a color."); return false; }
-			if (!col.startsWith("#") || col.length != 7) { msgReply(msg, "wrong color syntax."); return false; }
+			if (isNaN(lw)) { msgReply(msg, "circle size must be a number."); return null; }
+			if (col == undefined) { msgReply(msg, "you have to choose a color."); return null; }
+			col = colorValidator(msg, col);
+			if (col == null) return null;
 			const canvas = createCanvas(width, height);
 			const ctx = canvas.getContext('2d');
 			var img_data = new ImageData(new Uint8ClampedArray(img.bitmap.data), width, height);
@@ -305,8 +323,8 @@ async function effectProcess(msg, args, image) {
 			if (!isNaN(n))
 				await img.blur(n);
 			else {
-				msgReply(msg, "argument must be a number.");
-				return false;
+				msgReply(msg, "blur value must be a number.");
+				return null;
 			}
 			break;
 		case 'fisheye':
@@ -314,8 +332,8 @@ async function effectProcess(msg, args, image) {
 			if (!isNaN(r))
 				await img.fisheye({ r: r });
 			else {
-				msgReply(msg, "argument must be a number.");
-				return false;
+				msgReply(msg, "fisheye radius must be a number.");
+				return null;
 			}
 			break;
 		case 'pixel':
@@ -323,8 +341,8 @@ async function effectProcess(msg, args, image) {
 			if (!isNaN(sz)) {
 				await img.pixelate(sz);
 			} else {
-				msgReply(msg, "argument must be a number.");
-				return false;
+				msgReply(msg, "pixel size must be a number.");
+				return null;
 			}
 			break;
 		case 'sepia':
@@ -335,7 +353,7 @@ async function effectProcess(msg, args, image) {
 			break;
 		default:
 			msgReply(msg, "unknown command.");
-			return false;
+			return null;
 	}
 	return img;
 }
