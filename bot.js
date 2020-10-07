@@ -14,14 +14,7 @@ const { GifFrame, GifUtil, GifCodec, BitmapImage } = require('gifwrap');
 const phin = require('phin');
 
 bot.on('ready', () => {
-  console.log(bot.user.tag + " is online");
-	bot.user.setPresence({
-		activity: {
-			name: 'closely users pfp...',
-			type: 'WATCHING'
-		},
-		status: 'online' }
-	)
+	console.log(bot.user.tag + " is online");
 })
 
 
