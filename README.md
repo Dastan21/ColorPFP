@@ -17,5 +17,6 @@ ColorPFP is a Discord bot that allows you to apply effects on your profile pictu
  - *pixel [SIZE]* --pixelize the pfp
  - *sepia* --apply a sepia wash to the pfp
  - *gray* --remove colour from the pfp
+ - *reverse* --reverse a gif
 ## Invite
 https://discordapp.com/oauth2/authorize?client_id=734136118601318531&scope=bot&permissions=268486656

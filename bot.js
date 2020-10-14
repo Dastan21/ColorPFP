@@ -51,14 +51,6 @@ async function commandProcess(msg) {
 			msgSend(msg, img_url);
 			break;
 		case 'prominent':
-			// let buf = urldata.data;
-			// console.log(urldata.data);
-			// if (urldata.type === "gif") {
-			// 	var gif = await GifUtil.read(buf);
-			// 	var img = gif.frames[0];
-			// 	console.log(img);
-			// 	// buf = img.bitmap.data;
-			// }
 			showProminentsColors(msg, urldata.data);
 			break;
 		case 'color':
@@ -67,6 +59,7 @@ async function commandProcess(msg) {
 			if (roleValidator(msg, role, color)) changeRoleColor(msg, role, color);
 			break;
 		case 'effect':
+			if (arguments[0] === "reverse" && urldata.type !== "gif") { msgReply(msg, "works only with gifs."); return; }
 			if (urldata.type === "gif") gifModify(msg, arguments, urldata.data);
 			else 						imgModify(msg, arguments, urldata.data);
 			break;
@@ -195,6 +188,9 @@ function showMoreHelp(msg, cmd) {
 		case "gray":
 			embed.setTitle("GRAY").addFields({ name: "[ Usage ]", value: "`pfp effect gray`" }, { name: "[ Description ]" , value: "*Remove color from the image*" });
 			break;
+		case "reverse":
+			embed.setTitle("REVERSE").addFields({ name: "[ Usage ]", value: "`pfp effect reverse`" }, { name: "[ Description ]" , value: "*Reverse the gif*" });
+			break;
 		default:
 			msgReply(msg, "this command doesn't exist.");
 			correct = false;
@@ -257,16 +253,21 @@ async function gifModify(msg, args, gif_buf) {
 	var gif = await GifUtil.read(gif_buf);
 	if (await effectProcess(msg, args, await Jimp.read(gif.frames[0].bitmap)) == null) return;
 	else var msgBar = await msg.channel.send("", new Discord.MessageEmbed().setColor("#fffffe").addFields({ name: "[ Effect in progress ]", value: "`"+strEffect+"`" }, { name: "[ Progress bar ]", value: "`🔘▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬   0%`" }));
-	for (var i = 0; i < gif.frames.length; i++) {
-		frame = gif.frames[i];
-		img = await Jimp.read(frame.bitmap);
-		img = await effectProcess(msg, args, img);
-		await GifUtil.quantizeWu(new BitmapImage(img.bitmap), 256);
-		await frames.push(new GifFrame(img.bitmap, { xOffset: frame.xOffset, yOffset: frame.yOffset, disposalMethod: frame.disposalMethod, delayCentisecs: frame.delayCentisecs, interlaced: frame.interlaced }));
-		/* Progress bar */
-		let strProgress = "`"; let valProgress = Math.floor((i+1)/gif.frames.length*48); for (var j = 0; j < 49; j++) { if (j != valProgress) strProgress = strProgress + "▬"; else strProgress = strProgress + "🔘"; } strProgress = strProgress + "   "+ Math.floor(valProgress/48*100)+"%`";
-		await msgBar.edit("", new Discord.MessageEmbed().setColor("#fffffe").addFields({ name: "[ Effect in progress ]", value: "`"+strEffect+"`" }, { name: "[ Progress bar ]", value: strProgress }));
-	};
+	if (args[0] === "reverse") {
+		frames = gif.frames;
+		frames.reverse();
+	} else {
+		for (var i = 0; i < gif.frames.length; i++) {
+			frame = gif.frames[i];
+			img = await Jimp.read(frame.bitmap);
+			img = await effectProcess(msg, args, img);
+			await GifUtil.quantizeWu(new BitmapImage(img.bitmap), 256);
+			await frames.push(new GifFrame(img.bitmap, { xOffset: frame.xOffset, yOffset: frame.yOffset, disposalMethod: frame.disposalMethod, delayCentisecs: frame.delayCentisecs, interlaced: frame.interlaced }));
+			/* Progress bar */
+			let strProgress = "`"; let valProgress = Math.floor((i+1)/gif.frames.length*48); for (var j = 0; j < 49; j++) { if (j != valProgress) strProgress = strProgress + "▬"; else strProgress = strProgress + "🔘"; } strProgress = strProgress + "   "+ Math.floor(valProgress/48*100)+"%`";
+			await msgBar.edit("", new Discord.MessageEmbed().setColor("#fffffe").addFields({ name: "[ Effect in progress ]", value: "`"+strEffect+"`" }, { name: "[ Progress bar ]", value: strProgress }));
+		};
+	}
 
 
 	const encoder = new GifCodec();
@@ -343,6 +344,8 @@ async function effectProcess(msg, args, image) {
 			break;
 		case 'gray':
 			await img.grayscale();
+			break;
+		case 'reverse':
 			break;
 		default:
 			msgReply(msg, "unknown command.");
