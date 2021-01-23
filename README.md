@@ -8,6 +8,7 @@ ColorPFP is a Discord bot that allows you to apply effects on your profile pictu
  - **show [SIZE]** --show the pfp
  - **color @ROLE #COLOR** --change color of a role
  - **effect EFFECT** --apply an effect to the pfp
+ - **emoji LINK** --resize an image/gif to emojis' size : 48x48
 ## Effect commands
  - *circle #COLOR [CIRCLE_SIZE]* --draw a circle around the pfp
  - *round* --round the pfp with transparency

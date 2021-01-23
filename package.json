@@ -1,5 +1,5 @@
 {
-  "name": "ColorPFP",
+  "name": "colorpfp",
   "version": "1.0.0",
   "description": "Change color of a role following the average color of an user's pfp",
   "main": "bot.js",
