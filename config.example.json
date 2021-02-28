@@ -1,0 +1,12 @@
+{
+    "token": "your-token",
+    "prefix": "pfp",
+    "const": {
+        "SHOW_SIZE": 128,
+        "EFFECT_SIZE": 256,
+        "CIRCLE_SIZE": 25,
+        "BLUR_VALUE": 2,
+        "FISHEYE_RADIUS": 2,
+        "PIXEL_SIZE": 8
+    }
+}
